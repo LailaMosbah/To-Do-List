@@ -81,5 +81,7 @@ button:focus {
 }
 
 .done {
-    opacity: 50%;
+   opacity: 50%;
+    text-decoration: line-through;
+    color: gray;
 }
