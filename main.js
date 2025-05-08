@@ -2,29 +2,45 @@ let input = document.querySelector(".input")
 let submit = document.querySelector(".add")
 let tasksDiv = document.querySelector(".tasks")
 
-// Length of Text Area
-  input.addEventListener('input', () => {
-    input.style.width = `${input.value.length + 3}ch`;
-  });
+let editTaskId = null;
+
+// Dynamic input width on focus
+input.addEventListener('focus', () => {
+    const length = input.value.length > 0 ? input.value.length + 3 : "100%";
+    input.style.width = `${length}ch`;
+});
+
+// Reset width on blur
+input.addEventListener('blur', () => {
+    input.style.width = '100%';
+});
+
 
 
 
 
 let arrayOfTasks = [];
 
-if(window.localStorage.getItem('tasks')){
-    arrayOfTasks = JSON.parse(window.localStorage.getItem('tasks')) 
+if (window.localStorage.getItem('tasks')) {
+    arrayOfTasks = JSON.parse(window.localStorage.getItem('tasks'))
 }
 getDataFromLocalStorage();
 
 
 submit.onclick = () => {
-    // Check if the input is valid
+
     if (validateInput()) {
-        addTaskToArray(input.value);
+        if (editTaskId) {
+            updateTask(editTaskId, input.value);
+            editTaskId = null;
+            submit.textContent = "Add";
+        } else {
+            addTaskToArray(input.value);
+        }
         input.value = "";
-        input.style.width = "auto";
+        input.style.width = '100%';
     }
+
 };
 
 // Remove validation error when the input gains focus
@@ -44,9 +60,9 @@ function validateInput() {
 }
 
 // Click on Task Element 
-tasksDiv.addEventListener("click",(e)=>{
+tasksDiv.addEventListener("click", (e) => {
     //Delete
-    if(e.target.classList.contains("del")){
+    if (e.target.classList.contains("del")) {
         //Remove Element from Local Storage
         deleteTaskWithId(e.target.parentElement.parentElement.getAttribute("data-id"))
         //Remove Element from Page
@@ -54,33 +70,46 @@ tasksDiv.addEventListener("click",(e)=>{
     }
 
     //Update
-    if(e.target.classList.contains("cmp")){
-        toggleTaskStatusWithId(e.target.parentElement.parentElement.getAttribute("data-id"),e.target)
+    if (e.target.classList.contains("cmp")) {
+        toggleTaskStatusWithId(e.target.parentElement.parentElement.getAttribute("data-id"), e.target)
         e.target.parentElement.parentElement.classList.toggle("done")
-       
+
+    }
+    if (e.target.classList.contains('edit')) {
+        let taskId = e.target.parentElement.parentElement.getAttribute("data-id");
+        let task = arrayOfTasks.find(t => t.id == taskId);
+        input.value = task.title;
+        input.style.width = `${task.title.length + 3}ch`;
+        input.focus();
+        editTaskId = taskId;
+        submit.textContent = "Update";
     }
 })
 
 
-function addTaskToArray(taskText){
-    const task= 
+function addTaskToArray(taskText) {
+    const task =
     {
-        id : Date.now(),
-        title : taskText,
-        completed : false,
+        id: Date.now(),
+        title: taskText,
+        completed: false,
     }
     arrayOfTasks.push(task);
 
     //display tasks on page
     addElementsToPageFrom(arrayOfTasks);
     addDataToLocalStorageFrom(arrayOfTasks);
-    
+
 }
 
 
 //display task on page from the array
-function addElementsToPageFrom(arrayOfTasks){
+function addElementsToPageFrom(arrayOfTasks) {
     // Empty Tasks Div
+    if (arrayOfTasks.length == 0) {
+        tasksDiv.innerHTML = `<div class='task'> No Tasks </div>`
+        return
+    }
     tasksDiv.innerHTML = "";
     // Looping on Array of Tasks
 
@@ -88,69 +117,94 @@ function addElementsToPageFrom(arrayOfTasks){
         //main Task
         let taskDiv = document.createElement("div");
         taskDiv.className = 'task'
-        if(task.completed) {
+        if (task.completed) {
             taskDiv.className = "task done"
         }
-        taskDiv.setAttribute("data-id",task.id)
-        
-        console.log(taskDiv)
+        taskDiv.setAttribute("data-id", task.id)
+
+        //console.log(taskDiv)
         // Buttons Div
         let ButtonsDiv = document.createElement('div')
         ButtonsDiv.className = "Buttons"
-        console.log(ButtonsDiv.parentElement)
+        //console.log(ButtonsDiv.parentElement)
+
+        // Complete Button
+        let spanCmp = document.createElement("button")
+        spanCmp.className = 'cmp btn btn-success'
+        if (task.completed)
+            spanCmp.appendChild(document.createTextNode("To Do"))
+        else spanCmp.appendChild(document.createTextNode("Done"))
+        ButtonsDiv.appendChild(spanCmp)
+        //Edit Button
+        let spanEdit = document.createElement("button")
+        spanEdit.className = 'edit btn btn-secondary'
+        spanEdit.appendChild(document.createTextNode("Edit"))
+        ButtonsDiv.appendChild(spanEdit)
         // Delete Button
         let spanDel = document.createElement("button")
         spanDel.className = 'del btn btn-danger'
         spanDel.appendChild(document.createTextNode("Delete"))
         ButtonsDiv.appendChild(spanDel);
-        // Complete Button
-        let spanCmp = document.createElement("button")
-        spanCmp.className = 'cmp btn btn-success'
-        if(task.completed)
-         spanCmp.appendChild(document.createTextNode("Uncomplete"))
-        else spanCmp.appendChild(document.createTextNode("Complete"))
-        ButtonsDiv.appendChild(spanCmp)
-    
+
         //display Task on Tasks
-        taskDiv.appendChild(document.createTextNode(task.title))
+        let titleDiv = document.createElement("div");
+        titleDiv.className = "task-title";
+        titleDiv.textContent = task.title;
+        taskDiv.appendChild(titleDiv);
+
         taskDiv.appendChild(ButtonsDiv);
         tasksDiv.append(taskDiv)
     });
 }
 
 
-function addDataToLocalStorageFrom(arrayOfTasks){
-    window.localStorage.setItem("tasks",JSON.stringify(arrayOfTasks));
+function addDataToLocalStorageFrom(arrayOfTasks) {
+    window.localStorage.setItem("tasks", JSON.stringify(arrayOfTasks));
 }
 
-function getDataFromLocalStorage(){
+function getDataFromLocalStorage() {
     let data = window.localStorage.getItem("tasks");
-    if(data){
-        let tasks = JSON.parse(data);
-        addElementsToPageFrom(tasks)
+    if (data) {
+        arrayOfTasks = JSON.parse(data);
+        addElementsToPageFrom(arrayOfTasks)
+    }
+    else {
+        tasksDiv.innerHTML = `<div class='task'> No Tasks </div>`;
+        //console.log(tasksDiv)
+        return
     }
 }
 
-function deleteTaskWithId(taskId){
+function deleteTaskWithId(taskId) {
     arrayOfTasks = arrayOfTasks.filter((task) => task.id != taskId)
     addDataToLocalStorageFrom(arrayOfTasks)
+    addElementsToPageFrom(arrayOfTasks);
 
 }
 
-function toggleTaskStatusWithId(taskId,textButton){
-    for(let i =0 ; i<arrayOfTasks.length ; i++){
-        if(arrayOfTasks[i].id == taskId){
-            if(arrayOfTasks[i].completed == false)
-            {
+function updateTask(id, newTitle) {
+    arrayOfTasks = arrayOfTasks.map(task => {
+        if (task.id == id) {
+            return { ...task, title: newTitle };
+        }
+        return task;
+    });
+    addDataToLocalStorageFrom(arrayOfTasks);
+    addElementsToPageFrom(arrayOfTasks);
+}
+
+function toggleTaskStatusWithId(taskId, textButton) {
+    for (let i = 0; i < arrayOfTasks.length; i++) {
+        if (arrayOfTasks[i].id == taskId) {
+            if (arrayOfTasks[i].completed == false) {
                 arrayOfTasks[i].completed = true;
-                textButton.textContent = "Uncomplete"
+                textButton.textContent = "To Do"
             }
-            else
-            {
+            else {
                 arrayOfTasks[i].completed = false;
-                 textButton.textContent = "Complete"
+                textButton.textContent = "Done"
             }
-            
+
         }
     }
     addDataToLocalStorageFrom(arrayOfTasks)
